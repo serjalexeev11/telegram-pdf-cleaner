@@ -15,30 +15,33 @@ CHOICE = range(1)
 last_file_path = ""
 
 # === LIMITĂ DATĂ ===
-# Setează data până la care botul este activ (de ex. duminica viitoare)
-expiration_date = datetime(2025, 12, 21)  # modifici după nevoie
+# Data până la care botul este activ (modifică după nevoie)
+expiration_date = datetime(2025, 12, 21)
 
 # === START ===
 def start(update: Update, context: CallbackContext):
+    # Verificăm dacă botul este activ
     now = datetime.now()
     days_left = (expiration_date - now).days
     if days_left < 0:
-        update.message.reply_text("⛔ Botul nu mai este activ.")
+        update.message.reply_text("⛔ Бот больше не активен.")
         return ConversationHandler.END
 
+    # Mesaj către utilizator
     update.message.reply_text(
-        f"📄 Send a PDF file.\n"
-        "✅ I will clean the header (above 'BILL OF LADING'), all 'Phone:' numbers, and SuperDispatch links.\n"
-        f"📅 Bot activ încă {days_left} zile.\n"
-        "✏️ Then choose the company info to insert on every page."
+        f"📄 Отправьте PDF файл.\n"
+        "✅ Я очищу заголовок (выше 'BILL OF LADING'), все номера 'Phone:' и ссылки SuperDispatch.\n"
+        f"📅 Бот активен еще {days_left} дней.\n"
+        "✏️ Затем выберите информацию о компании для вставки на каждой странице."
     )
 
 # === HANDLE PDF ===
 def handle_pdf(update: Update, context: CallbackContext):
+    # Verificăm dacă botul este activ
     now = datetime.now()
     days_left = (expiration_date - now).days
     if days_left < 0:
-        update.message.reply_text("⛔ Botul nu mai este activ.")
+        update.message.reply_text("⛔ Бот больше не активен.")
         return ConversationHandler.END
 
     global last_file_path
@@ -47,22 +50,23 @@ def handle_pdf(update: Update, context: CallbackContext):
     input_path = f"recv_{file_name}"
     output_path = f"cleaned_{file_name}"
 
-    print(f"📄 Received PDF: {file_name}")
+    print(f"📄 Получен PDF: {file_name}")
     document.get_file().download(input_path)
 
     doc = fitz.open(input_path)
 
+    # Procesăm fiecare pagină
     for page_num, page in enumerate(doc):
-        print(f"📄 Processing page {page_num + 1}...")
+        print(f"📄 Обрабатывается страница {page_num + 1}...")
 
-        # 🧼 Remove header
+        # 🧼 Ștergem header-ul de deasupra "BILL OF LADING"
         areas = page.search_for("BILL OF LADING")
         if areas:
             y_cut = areas[0].y0
             rect = fitz.Rect(0, 0, page.rect.width, y_cut)
             page.add_redact_annot(rect, fill=(1, 1, 1))
 
-        # 🧼 Remove all Phone:
+        # 🧼 Ștergem toate "Phone:"
         phone_areas = page.search_for("Phone:")
         for area in phone_areas:
             redact_box = fitz.Rect(
@@ -73,7 +77,7 @@ def handle_pdf(update: Update, context: CallbackContext):
             )
             page.add_redact_annot(redact_box, fill=(1, 1, 1))
 
-        # 🧼 Remove superdispatch.com
+        # 🧼 Ștergem superdispatch.com
         link_areas = page.search_for("superdispatch.com")
         for area in link_areas:
             left_margin = 35
@@ -91,10 +95,10 @@ def handle_pdf(update: Update, context: CallbackContext):
     doc.save(output_path)
     doc.close()
 
-    print("🧼 All pages cleaned.")
+    print("🧼 Все страницы очищены.")
     last_file_path = output_path
 
-    # 🔹 DOAR O COMPANIE
+    # 🔹 Doar o companie disponibilă
     keyboard = [["FMK GROUP INC"]]
     reply_markup = ReplyKeyboardMarkup(
         keyboard,
@@ -103,7 +107,7 @@ def handle_pdf(update: Update, context: CallbackContext):
     )
 
     update.message.reply_text(
-        f"📌 Alege compania de inserat (bot activ încă {days_left} zile):",
+        f"📌 Выберите компанию для вставки (бот активен еще {days_left} дней):",
         reply_markup=reply_markup
     )
 
@@ -112,8 +116,9 @@ def handle_pdf(update: Update, context: CallbackContext):
 # === HANDLE CHOICE ===
 def handle_choice(update: Update, context: CallbackContext):
     choice = update.message.text
+    # Verificăm că utilizatorul a ales FMK GROUP INC
     if choice != "FMK GROUP INC":
-        update.message.reply_text("❌ Singura opțiune disponibilă este FMK GROUP INC.")
+        update.message.reply_text("❌ Доступна только FMK GROUP INC.")
         return ConversationHandler.END
 
     return insert_predefined_text(update, context, "FMK")
@@ -121,6 +126,8 @@ def handle_choice(update: Update, context: CallbackContext):
 # === INSERT PREDEFINED TEXT ===
 def insert_predefined_text(update: Update, context: CallbackContext, company_key):
     global last_file_path
+
+    # Setăm textul pentru companie
     if company_key == "FMK":
         predefined = (
             "FMK GROUP INC\n"
@@ -131,6 +138,7 @@ def insert_predefined_text(update: Update, context: CallbackContext, company_key
         )
 
     doc = fitz.open(last_file_path)
+    # Inserăm textul pe fiecare pagină
     for i, page in enumerate(doc):
         page.insert_text((40, 40), predefined, fontsize=12, color=(0, 0, 0))
 
@@ -138,8 +146,10 @@ def insert_predefined_text(update: Update, context: CallbackContext, company_key
     doc.save(final_path)
     doc.close()
 
+    # Trimitem PDF-ul final către utilizator
     with open(final_path, "rb") as f:
         update.message.reply_document(document=InputFile(f, filename=final_path))
+        print(f"✅ Отправлен файл: {final_path}")
 
     return ConversationHandler.END
 
@@ -161,7 +171,7 @@ def main():
 
     dp.add_handler(conv_handler)
 
-    print("✅ Bot is running. Waiting for PDF files...")
+    print("✅ Бот запущен. Ожидание PDF файлов...")
     updater.start_polling()
     updater.idle()
 
