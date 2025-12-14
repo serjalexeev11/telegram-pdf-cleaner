@@ -83,16 +83,17 @@ def handle_pdf(update: Update, context: CallbackContext):
         ["BM 5 EXPRESS LLC"]
     ]
     reply_markup = ReplyKeyboardMarkup(
-    keyboard,
-    resize_keyboard=True,
-    one_time_keyboard=False
-)
+        keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
 
-update.message.reply_text(
-    "📌 Choose the company info to insert:",
-    reply_markup=reply_markup
-)
+    update.message.reply_text(
+        "📌 Choose the company info to insert:",
+        reply_markup=reply_markup
+    )
 
+    # <-- return trebuie sa fie aliniat la nivelul funcției, nu mai adânc
     return CHOICE
 
 # === HANDLE CHOICE ===
@@ -178,5 +179,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
