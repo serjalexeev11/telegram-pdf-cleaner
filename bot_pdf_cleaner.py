@@ -6,7 +6,9 @@ from telegram.ext import (
 )
 
 # === TOKEN ===
-TOKEN = "7528136070:AAEyhnmldwiRqmjWf9cMr0fuPUhqmfgvyoM"
+import os
+TOKEN = os.environ.get("BOT_TOKEN")
+
 
 # === STATES ===
 CHOICE = range(1)
@@ -168,3 +170,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
