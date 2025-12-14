@@ -1,30 +1,46 @@
 import fitz  # PyMuPDF
-from telegram import Update, InputFile, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, InputFile, ReplyKeyboardMarkup
 from telegram.ext import (
     Updater, CommandHandler, MessageHandler, Filters,
     CallbackContext, ConversationHandler
 )
+import os
+from datetime import datetime, timedelta
 
 # === TOKEN ===
-import os
 TOKEN = os.environ.get("BOT_TOKEN")
-
 
 # === STATES ===
 CHOICE = range(1)
 last_file_path = ""
 
+# === LIMITĂ DATĂ ===
+# Setează data până la care botul este activ (de ex. duminica viitoare)
+expiration_date = datetime(2025, 12, 21)  # modifici după nevoie
+
 # === START ===
 def start(update: Update, context: CallbackContext):
-    print("📥 /start received from user.")
+    now = datetime.now()
+    days_left = (expiration_date - now).days
+    if days_left < 0:
+        update.message.reply_text("⛔ Botul nu mai este activ.")
+        return ConversationHandler.END
+
     update.message.reply_text(
-        "📄 Send a PDF file.\n"
+        f"📄 Send a PDF file.\n"
         "✅ I will clean the header (above 'BILL OF LADING'), all 'Phone:' numbers, and SuperDispatch links.\n"
+        f"📅 Bot activ încă {days_left} zile.\n"
         "✏️ Then choose the company info to insert on every page."
     )
 
 # === HANDLE PDF ===
 def handle_pdf(update: Update, context: CallbackContext):
+    now = datetime.now()
+    days_left = (expiration_date - now).days
+    if days_left < 0:
+        update.message.reply_text("⛔ Botul nu mai este activ.")
+        return ConversationHandler.END
+
     global last_file_path
     document = update.message.document
     file_name = document.file_name
@@ -78,44 +94,34 @@ def handle_pdf(update: Update, context: CallbackContext):
     print("🧼 All pages cleaned.")
     last_file_path = output_path
 
-    keyboard = [
-        ["FMK GROUP INC"],
-        ["BM 5 EXPRESS LLC"]
-    ]
+    # 🔹 DOAR O COMPANIE
+    keyboard = [["FMK GROUP INC"]]
     reply_markup = ReplyKeyboardMarkup(
         keyboard,
         resize_keyboard=True,
-        one_time_keyboard=False
+        one_time_keyboard=True
     )
 
     update.message.reply_text(
-        "📌 Choose the company info to insert:",
+        f"📌 Alege compania de inserat (bot activ încă {days_left} zile):",
         reply_markup=reply_markup
     )
 
-    # <-- return trebuie sa fie aliniat la nivelul funcției, nu mai adânc
     return CHOICE
 
 # === HANDLE CHOICE ===
 def handle_choice(update: Update, context: CallbackContext):
     choice = update.message.text
-    print(f"📌 User selected: {choice}")
-    choice_upper = choice.upper()
-
-    if "FMK" in choice_upper:
-        return insert_predefined_text(update, context, "FMK")
-    elif "BM" in choice_upper:
-        return insert_predefined_text(update, context, "BM")
-    else:
-        update.message.reply_text("❌ Unknown selection.")
+    if choice != "FMK GROUP INC":
+        update.message.reply_text("❌ Singura opțiune disponibilă este FMK GROUP INC.")
         return ConversationHandler.END
 
-# === INSERT PREDEFINED TEXT ON ALL PAGES ===
+    return insert_predefined_text(update, context, "FMK")
+
+# === INSERT PREDEFINED TEXT ===
 def insert_predefined_text(update: Update, context: CallbackContext, company_key):
     global last_file_path
-
     if company_key == "FMK":
-        print("✍️ Inserting FMK GROUP INC")
         predefined = (
             "FMK GROUP INC\n"
             "33 E GRAND AVE UNIT 42\n"
@@ -123,35 +129,17 @@ def insert_predefined_text(update: Update, context: CallbackContext, company_key
             "USDOT:  4252237\n"
             "MC: 1738338"
         )
-    elif company_key == "BM":
-        print("✍️ BM 5 EXPRESS LLC")
-        predefined = (
-            "BM 5 EXPRESS LLC\n"
-            "3507 COURT ST #1009\n"
-            "PEKIN, IL   61554\n"
-            "USDOT: 4252114\n"
-            "MC: 1721817"
-        )
-    else:
-        update.message.reply_text("❌ Unknown company.")
-        return ConversationHandler.END
 
     doc = fitz.open(last_file_path)
     for i, page in enumerate(doc):
-        print(f"✍️ Inserting on page {i + 1}")
         page.insert_text((40, 40), predefined, fontsize=12, color=(0, 0, 0))
 
     final_path = last_file_path.replace("cleaned_", "final_")
     doc.save(final_path)
     doc.close()
 
-    try:
-        with open(final_path, "rb") as f:
-            update.message.reply_document(document=InputFile(f, filename=final_path))
-            print(f"✅ Sent file: {final_path}")
-    except Exception as e:
-        print(f"❌ Error sending PDF: {e}")
-        update.message.reply_text("❌ Failed to send the modified PDF.")
+    with open(final_path, "rb") as f:
+        update.message.reply_document(document=InputFile(f, filename=final_path))
 
     return ConversationHandler.END
 
@@ -179,8 +167,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
