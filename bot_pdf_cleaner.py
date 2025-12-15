@@ -99,7 +99,7 @@ def handle_pdf(update: Update, context: CallbackContext):
     last_file_path = output_path
 
     # 🔹 Doar o companie disponibilă
-    keyboard = [["FMK GROUP INC"]]
+    keyboard = [["JNI GROUP INC"]]
     reply_markup = ReplyKeyboardMarkup(
         keyboard,
         resize_keyboard=True,
@@ -116,9 +116,9 @@ def handle_pdf(update: Update, context: CallbackContext):
 # === HANDLE CHOICE ===
 def handle_choice(update: Update, context: CallbackContext):
     choice = update.message.text
-    # Verificăm că utilizatorul a ales FMK GROUP INC
-    if choice != "FMK GROUP INC":
-        update.message.reply_text("❌ Доступна только FMK GROUP INC.")
+    # Verificăm că utilizatorul a ales JNI GROUP INC
+    if choice != "JNI GROUP INC":
+        update.message.reply_text("❌ Доступна только JNI GROUP INC.")
         return ConversationHandler.END
 
     return insert_predefined_text(update, context, "FMK")
@@ -130,11 +130,11 @@ def insert_predefined_text(update: Update, context: CallbackContext, company_key
     # Setăm textul pentru companie
     if company_key == "FMK":
         predefined = (
-            "FMK GROUP INC\n"
-            "33 E GRAND AVE UNIT 42\n"
-            "FOX LAKE, IL   60020\n"
-            "USDOT:  4252237\n"
-            "MC: 1738338"
+            "JNI GROUP INC\n"
+            "4405 Roberts Rd\n"
+            "Island Lake, IL US 60042\n"
+            "USDOT:  3291557\n"
+            "MC: 1042416"
         )
 
     doc = fitz.open(last_file_path)
@@ -177,3 +177,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
