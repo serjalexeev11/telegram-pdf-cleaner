@@ -16,7 +16,7 @@ last_file_path = ""
 
 # === LIMITĂ DATĂ ===
 # Data până la care botul este activ (modifică după nevoie)
-expiration_date = datetime(2025, 12, 21)
+expiration_date = datetime(2025, 12, 22)
 
 # === START ===
 def start(update: Update, context: CallbackContext):
@@ -177,4 +177,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
